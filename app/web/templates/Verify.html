@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaku-Ryu Verify Email</title>
+  <link rel="icon" type="image/png" href="/static/images/kaku-ryu-logo.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <header class="flex justify-between items-center px-6 py-4 bg-blue-950 text-white shadow-md">
+    <div class="flex items-center gap-4">
+      <img src="/static/images/kaku-ryu.png" alt="Kaku-Ryu Logo" class="w-12 h-12 rounded-full object-contain" />
+      <h1 class="text-xl font-semibold">Kaku-Ryu: My Dynamic Resume Engine</h1>
+    </div>
+    <button id="dark-mode-toggle" class="text-2xl hover:bg-white/10 p-2 rounded" aria-label="Toggle Dark Mode">🌙</button>
+  </header>
+
+  <!-- Verification Card -->
+  <main class="flex-1 flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-md bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-8 space-y-6 transition-all">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-blue-950 dark:text-orange-400">Kaku-Ryu</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-300">Email Verification</p>
+      </div>
+
+      <div>
+        <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+          A verification code has been sent to <strong id="display-email" class="text-blue-600 dark:text-orange-400">your email address</strong>. Please enter it below.
+        </p>
+
+        <form id="verify-form" class="space-y-4">
+          <div>
+            <label for="verification-code" class="block text-sm font-medium">Verification Code</label>
+            <input type="text" id="verification-code" name="code" maxlength="6" required
+              class="w-full mt-1 p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-orange-400" />
+          </div>
+
+          <button type="submit"
+            class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition">
+            Verify Email
+          </button>
+        </form>
+
+        <button id="resend-code-btn"
+          class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md transition mt-4">
+          Resend Code
+        </button>
+
+        <div id="auth-message" class="text-center text-sm font-medium p-3 rounded-md mt-4 hidden"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Dark mode toggle logic
+    document.getElementById('dark-mode-toggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      // Store preference
+      if (document.body.classList.contains('dark')) {
+        localStorage.setItem('theme', 'dark');
+      } else {
+        localStorage.setItem('theme', 'light');
+      }
+    });
+
+    // Apply dark mode preference on load
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const verifyForm = document.getElementById('verify-form');
+      const authMessage = document.getElementById('auth-message');
+      const displayEmail = document.getElementById('display-email');
+      const verificationCodeInput = document.getElementById('verification-code');
+      const resendCodeBtn = document.getElementById('resend-code-btn'); // New button reference
+
+      // Get email from query string
+      const params = new URLSearchParams(window.location.search);
+      const userEmail = params.get('email');
+      // Removed pre-filling of code as it's now sent via email
+      // const verificationCodeFromURL = params.get('code'); 
+      // if (verificationCodeFromURL) { verificationCodeInput.value = verificationCodeFromURL; }
+
+      if (userEmail) {
+        displayEmail.textContent = userEmail;
+      } else {
+        // If email is not in URL, prompt user or redirect
+        showMessage('Error: Email not provided. Please go back to signup.', 'error');
+        // Optionally redirect after a delay
+        // setTimeout(() => { window.location.href = '/register_page'; }, 3000);
+      }
+
+      function showMessage(message, type) {
+        authMessage.textContent = message;
+        authMessage.className = `text-center text-sm font-medium p-3 rounded-md mt-4 ${
+          type === 'success'
+            ? 'bg-green-500 text-white'
+            : type === 'error'
+            ? 'bg-red-500 text-white'
+            : 'bg-blue-500 text-white'
+        }`;
+        authMessage.style.display = 'block';
+      }
+
+      verifyForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const code = verificationCodeInput.value; // Get code from the input field
+
+        if (!userEmail) {
+          showMessage('Error: Email not provided. Please go back to signup.', 'error');
+          return;
+        }
+
+        showMessage('Verifying code...', 'info');
+
+        try {
+          const response = await fetch('/verify-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ email: userEmail, code: code }).toString()
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            showMessage(data.message, 'success');
+            setTimeout(() => {
+              window.location.href = '/login_page';
+            }, 2000);
+          } else {
+            showMessage(`Error: ${data.detail || 'Verification failed.'}`, 'error');
+          }
+        } catch (error) {
+          console.error('Verification error:', error);
+          showMessage('Network error or server unreachable.', 'error');
+        }
+      });
+
+      // Event listener for Resend Code button (NEW)
+      resendCodeBtn.addEventListener('click', async () => {
+        if (!userEmail) {
+          showMessage('Error: Cannot resend code without email.', 'error');
+          return;
+        }
+        showMessage('Resending code...', 'info');
+        try {
+          const response = await fetch('/resend-verification-code', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ email: userEmail }).toString()
+          });
+          const data = await response.json();
+          if (response.ok) {
+            showMessage(data.message, 'success');
+          } else {
+            showMessage(`Error: ${data.detail || 'Failed to resend code.'}`, 'error');
+          }
+        } catch (error) {
+          console.error('Resend code error:', error);
+          showMessage('Network error or server unreachable for resending code.', 'error');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

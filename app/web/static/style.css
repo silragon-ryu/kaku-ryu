@@ -1,0 +1,446 @@
+/* app/web/static/style.css */
+
+:root {
+  /* Light Mode Variables */
+  --bg-color: #F8F9FA;
+  --text-color: #1C1C1C;
+  --accent: #E63946; /* Red */
+  --accent-secondary: #0A1F44; /* Dark Blue */
+  --hover-color: #d6333f; /* Darker Red */
+  --card-bg-color: #FFFFFF; /* White for content cards */
+  --border-color: #e0e0e0; /* Light gray border for general elements */
+  --status-box-bg: #f0f0f0; /* Lighter background for status box in light mode */
+  --status-box-border: #ccc; /* Border for status box */
+  --shadow-color: rgba(0, 0, 0, 0.08); /* Subtle shadow for main content */
+
+  /* Specific status message colors (can be themed or kept constant) */
+  --info-color: #007bff;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+}
+
+/* Dark Mode Variables - Applied when .dark class is on body/html */
+body.dark {
+  --bg-color: #121212;
+  --text-color: #E0E0E0; /* This is the light text color */
+  --accent: #FF6F3C; /* Orange */
+  --hover-color: #ff5a3c; /* Darker Orange */
+  --card-bg-color: #1c1c1c; /* Darker background for content cards */
+  --border-color: #444; /* Darker gray border */
+  --status-box-bg: #2c2c2c; /* Darker background for status box in dark mode */
+  --status-box-border: #555; /* Darker border for status box */
+  --shadow-color: rgba(0, 0, 0, 0.3); /* More pronounced shadow for dark mode */
+
+  /* Dark mode specific status colors (adjust if needed, keeping them slightly lighter than light mode often helps contrast) */
+  --info-color: #82b1ff;
+  --success-color: #69f0ae;
+  --error-color: #ff8a80;
+}
+
+/* Universal Transition for smooth theme changes */
+* {
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+}
+
+/* Base Body Styles - Applies to all pages (dashboard, login, register) */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column; /* Stacks navbar at top, content below */
+  overflow-x: hidden; /* Prevents horizontal scroll on mobile */
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background-color: var(--accent-secondary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 100%; /* Ensure navbar spans full width */
+  box-sizing: border-box; /* Include padding in width calculation */
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.navbar-brand h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: white;
+}
+
+.logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  font-size: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: white;
+  padding: 5px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+
+/* Main Content Area (for dashboard pages, not auth pages) */
+main {
+  flex-grow: 1; /* Allows it to take available vertical space */
+  padding: 30px;
+  max-width: 900px;
+  margin: 30px auto;
+  background-color: var(--card-bg-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px var(--shadow-color);
+}
+
+section {
+  margin-bottom: 40px;
+}
+
+/* Section Headings */
+h2 {
+  font-size: 2em;
+  color: var(--accent-secondary); /* Dark blue in light mode */
+  border-bottom: 3px solid var(--accent); /* Red in light mode */
+  padding-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: 25px;
+  letter-spacing: 0.5px;
+}
+
+/* General Button Styles */
+.btn-accent, .btn-secondary, .btn-primary {
+  width: 100%; /* Apply to all buttons */
+  padding: 12px 25px;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 8px;
+  font-size: 1.05em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  border: none; /* Reset border for all buttons */
+}
+
+.btn-primary { /* Specific styles for primary button (used for login/signup submit) */
+  background-color: var(--accent);
+  color: white;
+  /* margin-top: 1rem; Removed from here, handled by .login-container .btn-primary specific rule */
+}
+
+.btn-primary:hover {
+  background-color: var(--hover-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary { /* Specific styles for secondary button (e.g., upload CV) */
+  background-color: var(--status-box-bg); /* Use a lighter background */
+  color: var(--text-color); /* Use text color */
+  border: 1px solid var(--border-color); /* Use border color */
+}
+
+.btn-secondary:hover {
+  background-color: var(--border-color); /* Slightly darker on hover */
+}
+
+
+/* Forms for buttons */
+form {
+    margin-bottom: 15px;
+}
+
+/* Status Box Fix & Improvement */
+.status-box {
+  margin-top: 25px;
+  padding: 18px 20px;
+  border-radius: 10px;
+  background-color: var(--status-box-bg);
+  border: 1px solid var(--status-box-border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  font-size: 1.0em;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.status-box p {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Specific status message colors (from variables) */
+.status-box .info { color: var(--info-color); }
+.status-box .success { color: var(--success-color); }
+.status-box .error { color: var(--error-color); }
+
+/* Project Item Styling */
+.project-item {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background-color: var(--card-bg-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.project-item h3 {
+  font-size: 1.5em;
+  color: var(--accent-secondary); /* Dark blue for project titles in light mode */
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.project-item p {
+  margin-bottom: 8px;
+  font-size: 0.95em;
+}
+
+.project-item p strong {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.project-item a {
+  color: var(--info-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.project-item a:hover {
+  text-decoration: underline;
+  color: var(--accent);
+}
+
+/* Footer Styling */
+footer {
+  text-align: center;
+  padding: 25px;
+  color: #888;
+  font-size: 0.9em;
+  border-top: 1px solid var(--border-color);
+  margin-top: auto;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    padding: 15px;
+  }
+
+  .navbar-brand {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .navbar-brand h1 {
+    font-size: 1.4em;
+    text-align: center;
+  }
+
+  main {
+    padding: 20px;
+    margin: 20px 15px;
+  }
+
+  h2 {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+  }
+
+  .btn-accent, .btn-primary, .btn-secondary { /* Apply to all buttons */
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 1em;
+    margin-bottom: 10px;
+  }
+
+  form {
+      margin-bottom: 10px;
+  }
+
+  .project-item {
+    padding: 15px;
+  }
+
+  .project-item h3 {
+    font-size: 1.3em;
+  }
+
+  .status-box {
+    padding: 15px;
+    margin-top: 20px;
+  }
+
+  footer {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-brand h1 {
+    font-size: 1.2em;
+  }
+
+  main {
+    margin: 15px 10px;
+    padding: 15px;
+  }
+
+  h2 {
+    font-size: 1.6em;
+  }
+
+  .btn-accent, .btn-primary, .btn-secondary { /* Apply to all buttons */
+    padding: 10px 15px;
+    font-size: 0.95em;
+  }
+}
+
+/* ----------------------------------------------------------------------
+    Dark Mode Specific Styles (Applied when body has .dark class)
+    ----------------------------------------------------------------------
+*/
+body.dark h2 {
+  color: var(--text-color); /* Light text color for headings in dark mode */
+  border-bottom-color: var(--accent); /* Primary accent orange for dark mode */
+}
+
+/* You might want to adjust project item h3 as well if you want it to be light */
+body.dark .project-item h3 {
+  color: var(--text-color); /* Light text color for project titles in dark mode */
+}
+
+/* --- Authentication Pages (Login/Register) Specific Styles --- */
+/* Apply this class to the <body> of login.html and register.html */
+/* --------------------------
+   Auth Page Styles
+-------------------------- */
+
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  background-color: var(--bg-color);
+  padding: 40px 15px;
+}
+
+.auth-content-wrapper {
+  max-width: 420px;
+  width: 100%;
+  background-color: var(--card-bg-color);
+  padding: 40px 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px var(--shadow-color);
+  text-align: center;
+  animation: fadeIn 0.4s ease;
+}
+
+.auth-content-wrapper h1 {
+  margin-bottom: 8px;
+  font-size: 1.8em;
+  color: var(--accent-secondary);
+}
+
+.auth-content-wrapper h2 {
+  font-size: 1.5em;
+  margin-bottom: 25px;
+  border-bottom: none;
+  color: var(--accent);
+}
+
+.auth-content-wrapper p {
+  margin-bottom: 25px;
+  color: var(--text-color);
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg, #fff);
+  color: var(--text-color);
+  font-size: 1em;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 5px var(--accent);
+}
+
+/* Auth Message Styling */
+.message {
+  margin-top: 20px;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.message.info { background-color: var(--info-color); color: white; }
+.message.success { background-color: var(--success-color); color: white; }
+.message.error { background-color: var(--error-color); color: white; }
+
+.toggle-link {
+  margin-top: 15px;
+  font-size: 0.95em;
+  color: var(--text-color);
+}
+
+.toggle-link a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.toggle-link a:hover {
+  text-decoration: underline;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

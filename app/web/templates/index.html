@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaku-Ryu Dashboard</title>
+    <link rel="icon" type="image/png" href="/static/images/kaku-ryu.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+        .transition-colors {
+            transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .animate-pulse-once {
+            animation: pulse-once 1s ease-in-out;
+        }
+        @keyframes pulse-once {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Status badge styles */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px; /* Full pill shape */
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600; /* font-semibold */
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            color: #fff; /* Default text color */
+        }
+
+        .status-badge-green {
+            background-color: #10B981; /* Tailwind green-500 */
+        }
+
+        .status-badge-red {
+            background-color: #EF4444; /* Tailwind red-500 */
+        }
+
+        .status-badge-yellow {
+            background-color: #F59E0B; /* Tailwind yellow-500 */
+        }
+
+        .status-badge-blue {
+            background-color: #3B82F6; /* Tailwind blue-500 */
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+        import { getAuth, signInWithCustomToken, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
+
+        // IMPORTANT: Replace with your actual Firebase project configuration.
+        // You can find this in your Firebase project settings -> Project settings -> General -> Your apps -> Web app -> Firebase SDK snippet -> Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCuDPweYkJrz0ea_wPDfVjT8xeQcTt9h1Q",
+            authDomain: "kaku-ryu.firebaseapp.com",
+            projectId: "kaku-ryu",
+            storageBucket: "kaku-ryu.firebasestorage.app",
+            messagingSenderId: "205503877436",
+            appId: "1:205503877436:web:48bc3d4fc87d09544e0e39",
+            measurementId: "G-6NM0385QHW"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        let currentUserId = null; // To store the authenticated user's UID
+        let isAuthReady = false; // Flag to indicate if auth state has been checked
+
+        // Function to get Firebase ID token
+        async function getFirebaseIdToken() {
+            console.log("getFirebaseIdToken called.");
+            if (auth.currentUser) {
+                const token = await auth.currentUser.getIdToken();
+                console.log("Firebase currentUser exists. Token obtained:", token ? token.substring(0, 30) + '...' : 'null');
+                return token;
+            }
+            console.log("Firebase currentUser is null. No token available.");
+            return null;
+        }
+
+        // Function to show the message box
+        function showMessage(message, type = 'info') {
+            const messageBox = document.getElementById('message-box');
+            const messageText = document.getElementById('message-text');
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-green-500', 'bg-red-500', 'bg-blue-500');
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-500');
+            } else {
+                messageBox.classList.add('bg-blue-500');
+            }
+            messageBox.classList.add('block', 'animate-pulse-once'); // Add animation
+            setTimeout(() => {
+                messageBox.classList.remove('animate-pulse-once');
+            }, 1000); // Remove animation class after it completes
+        }
+
+        // Function to update UI based on authentication state
+        async function updateAuthUI(user) {
+            if (user) {
+                currentUserId = user.uid;
+                // The display_user_name is passed from the backend template for initial load
+                // but we will fetch the full profile data for comprehensive display.
+                // document.getElementById('user-display-name').textContent = `Hello, ${user.displayName || user.email || 'User'}!`;
+                document.getElementById('logout-btn').style.display = 'inline-block';
+                // Fetch and display user profile and projects
+                await fetchUserProfile(); // Pass user.uid implicitly via currentUserId
+                await fetchProjects();
+            } else {
+                currentUserId = null;
+                document.getElementById('user-display-name').textContent = '';
+                document.getElementById('logout-btn').style.display = 'none';
+                // Redirect to login if not on login/register/verify page
+                if (!window.location.pathname.includes('/login_page') &&
+                    !window.location.pathname.includes('/register_page') &&
+                    !window.location.pathname.includes('/verify_page')) {
+                    window.location.href = '/login_page';
+                }
+            }
+        }
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, async (user) => {
+            isAuthReady = true; // Auth state has been checked at least once
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const idTokenFromUrl = urlParams.get('id_token');
+            const messageFromUrl = urlParams.get('message');
+            const messageTypeFromUrl = urlParams.get('type');
+
+            // Prioritize sign-in with custom token if available and no user is currently signed in
+            if (idTokenFromUrl && !user) {
+                try {
+                    console.log("onAuthStateChanged: Attempting to sign in with custom token from URL...");
+                    await signInWithCustomToken(auth, idTokenFromUrl);
+                    console.log("onAuthStateChanged: Signed in successfully with custom token.");
+                    // After successful sign-in, the onAuthStateChanged listener will fire again
+                    // with the signed-in user, and updateAuthUI will be called then.
+                    // Clean URL immediately after successful token use
+                    const newUrl = new URL(window.location.origin + window.location.pathname);
+                    if (messageFromUrl) newUrl.searchParams.set('message', messageFromUrl);
+                    if (messageTypeFromUrl) newUrl.searchParams.set('type', messageTypeFromUrl);
+                    window.history.replaceState({}, document.title, newUrl.toString());
+                } catch (error) {
+                    console.error("onAuthStateChanged: Error signing in with custom token:", error);
+                    showMessage(`Login failed: ${error.message}`, 'error');
+                    // Redirect to login page if custom token sign-in fails
+                    window.location.href = '/login_page?message=' + encodeURIComponent('Authentication failed. Please try logging in again.') + '&type=error';
+                }
+            } else {
+                // Normal state change or initial load without id_token
+                updateAuthUI(user);
+
+                // Display messages from URL if present (after initial auth handling)
+                if (messageFromUrl) {
+                    showMessage(decodeURIComponent(messageFromUrl), messageTypeFromUrl);
+                    // Clean the URL of message/type after displaying
+                    const newUrl = new URL(window.location.origin + window.location.pathname);
+                    window.history.replaceState({}, document.title, newUrl.toString());
+                }
+            }
+        });
+
+        // Expose getFirebaseIdToken globally for other scripts if needed
+        window.getFirebaseIdToken = getFirebaseIdToken;
+        window.showMessage = showMessage; // Expose showMessage globally
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Dark mode toggle logic
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            darkModeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark');
+                if (document.body.classList.contains('dark')) {
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.body.classList.add('dark');
+            } else {
+                document.body.classList.remove('dark');
+            }
+
+            const closeMessageBtn = document.getElementById('close-message-btn');
+            closeMessageBtn.addEventListener('click', () => {
+                document.getElementById('message-box').classList.add('hidden');
+            });
+
+            // Function to fetch user profile data
+            window.fetchUserProfile = async () => {
+                if (!currentUserId) {
+                    console.warn("fetchUserProfile: No currentUserId available.");
+                    // Since the profile section is removed, no need to set N/A for profile fields
+                    return;
+                }
+                try {
+                    const idToken = await getFirebaseIdToken();
+                    if (!idToken) {
+                        showMessage('Not authenticated. Please log in.', 'error');
+                        return;
+                    }
+                    const response = await fetch(`/api/user_cv_data?user_id=${currentUserId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`
+                        }
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`HTTP error! status: ${response.status} - ${errorData.detail || 'Unknown error'}`);
+                    }
+                    const result = await response.json();
+                    const data = result.user_cv_data; // Access the nested user_cv_data object
+
+                    // Update the user display name in the header
+                    document.getElementById('user-display-name').textContent = `Hello, ${data.name || data.email || 'User'}!`;
+
+                    // Update status badges based on backend messages if available
+                    // These are placeholders; actual status would come from backend API
+                    document.getElementById('github-status').textContent = 'Ready';
+                    document.getElementById('github-status').className = 'status-badge status-badge-green';
+                    document.getElementById('analyzer-status').textContent = 'Ready';
+                    document.getElementById('analyzer-status').className = 'status-badge status-badge-green';
+                    document.getElementById('scoring-status').textContent = 'Ready';
+                    document.getElementById('scoring-status').className = 'status-badge status-badge-green';
+                    document.getElementById('cv-writer-status').textContent = 'Ready';
+                    document.getElementById('cv-writer-status').className = 'status-badge status-badge-green';
+                    document.getElementById('cv-parser-status').textContent = 'Ready';
+                    document.getElementById('cv-parser-status').className = 'status-badge status-badge-green';
+
+                } catch (error) {
+                    console.error('Error fetching user profile:', error);
+                    showMessage(`Failed to load user profile: ${error.message}`, 'error');
+                }
+            };
+
+            // Function to fetch and display projects
+            window.fetchProjects = async () => {
+                const projectsContainer = document.getElementById('projects-container');
+                projectsContainer.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400">Loading projects...</p>';
+                if (!currentUserId) {
+                    console.warn("fetchProjects: No currentUserId available.");
+                    projectsContainer.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400">Please log in to view projects.</p>';
+                    return;
+                }
+                try {
+                    const idToken = await getFirebaseIdToken();
+                    if (!idToken) {
+                        showMessage('Not authenticated. Please log in.', 'error');
+                        return;
+                    }
+                    const response = await fetch('/api/projects', {
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`
+                        }
+                    });
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        displayProjects(data.projects);
+                        // showMessage(data.message, 'success'); // Avoid showing too many success messages
+                    } else {
+                        showMessage(`Error fetching projects: ${data.detail || 'Unknown error'}`, 'error');
+                        projectsContainer.innerHTML = `<p class="text-center text-red-500 dark:text-red-400">Error: ${data.detail || 'Failed to load projects.'}</p>`;
+                    }
+                } catch (error) {
+                    console.error('Error fetching projects:', error);
+                    showMessage('Network error or server unreachable while fetching projects.', 'error');
+                    projectsContainer.innerHTML = '<p class="text-center text-red-500 dark:text-red-400">Network error. Could not load projects.</p>';
+                }
+            };
+
+            function displayProjects(projects) {
+                const projectsContainer = document.getElementById('projects-container');
+                projectsContainer.innerHTML = '';
+                if (projects.length === 0) {
+                    projectsContainer.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400">No projects found or analyzed. Upload your CV or connect GitHub to get started!</p>';
+                    return;
+                }
+
+                projects.forEach(project => {
+                    const projectCard = document.createElement('div');
+                    projectCard.className = 'bg-gray-50 dark:bg-gray-700 p-6 rounded-2xl shadow-md transition-colors hover:shadow-xl';
+                    projectCard.innerHTML = `
+                        <h3 class="text-xl font-semibold text-blue-950 dark:text-orange-400 mb-2">${project.name || 'Unnamed Project'}</h3>
+                        <p class="text-gray-700 dark:text-gray-300 mb-2">${project.summary || 'No summary available.'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Skills:</strong> ${project.skills && project.skills.length > 0 ? project.skills.join(', ') : 'N/A'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Technologies:</strong> ${project.technologies && project.technologies.length > 0 ? project.technologies.join(', ') : 'N/A'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Achievements:</strong> ${project.achievements && project.achievements.length > 0 ? project.achievements.join('; ') : 'N/A'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Complexity:</strong> ${project.estimated_complexity_qualitative || 'N/A'}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Score:</strong> ${project.score !== undefined ? project.score : 'N/A'}</p>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            ${project.html_url ? `<a href="${project.html_url}" target="_blank" class="text-blue-600 hover:underline text-sm">View on GitHub</a>` : ''}
+                        </div>
+                    `;
+                    projectsContainer.appendChild(projectCard);
+                });
+            }
+
+            const uploadCvForm = document.getElementById('upload-cv-form');
+            const downloadResumeBtn = document.getElementById('download-resume-btn');
+            const updateResumeBtn = document.getElementById('update-resume-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            uploadCvForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                showMessage('Uploading and parsing CV...', 'info');
+
+                const formData = new FormData(uploadCvForm);
+                const fileInput = uploadCvForm.querySelector('input[type="file"]');
+                if (fileInput.files.length === 0) {
+                    showMessage('Please select a file to upload.', 'error');
+                    return;
+                }
+
+                try {
+                    const idToken = await getFirebaseIdToken();
+                    if (!idToken) {
+                        showMessage('Not authenticated. Please log in.', 'error');
+                        return;
+                    }
+                    console.log("Uploading CV with token:", idToken.substring(0, 30) + '...');
+
+                    const response = await fetch('/upload-cv', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showMessage(data.message, 'success');
+                        await fetchUserProfile(); // Refresh profile data after upload
+                        await fetchProjects(); // Re-fetch projects to update analysis
+                    } else {
+                        showMessage(`Error: ${data.detail || 'CV upload failed.'}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('CV upload error:', error);
+                    showMessage('Network error or server unreachable during CV upload.', 'error');
+                }
+            });
+
+            downloadResumeBtn.addEventListener('click', async () => {
+                showMessage('Preparing resume for download...', 'info');
+                try {
+                    const idToken = await getFirebaseIdToken();
+                    if (!idToken) {
+                        showMessage('Not authenticated. Please log in.', 'error');
+                        return;
+                    }
+                    console.log("Downloading resume with token:", idToken.substring(0, 30) + '...');
+
+                    const format = 'pdf'; // or 'docx'
+                    const response = await fetch(`/download-resume?format=${format}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = 'resume.pdf'; // Default filename
+                        if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
+                            const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        showMessage('Resume downloaded successfully!', 'success');
+                    } else {
+                        const errorData = await response.json();
+                        showMessage(`Error downloading resume: ${errorData.detail || 'Unknown error'}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Download resume error:', error);
+                    showMessage('Network error or server unreachable during resume download.', 'error');
+                }
+            });
+
+            updateResumeBtn.addEventListener('click', async () => {
+                showMessage('Updating resume data from GitHub...', 'info');
+                await fetchProjects(); // Re-run project fetching and analysis
+                showMessage('Resume data update initiated. Check project list.', 'success');
+            });
+
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                    showMessage('Logged out successfully.', 'success');
+                    // Redirect to login page after logout
+                    window.location.href = '/login_page';
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                    showMessage(`Logout failed: ${error.message}`, 'error');
+                }
+            });
+        });
+    </script>
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+
+    <!-- Message Box -->
+    <div id="message-box" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 p-4 rounded-lg shadow-lg text-white hidden">
+        <div class="flex items-center justify-between">
+            <span id="message-text" class="font-medium"></span>
+            <button id="close-message-btn" class="ml-4 text-white hover:text-gray-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <header class="flex justify-between items-center px-6 py-4 bg-blue-950 text-white shadow-md w-full">
+        <div class="flex items-center gap-4">
+            <img src="/static/images/kaku-ryu.png" alt="Kaku-Ryu Logo" class="w-12 h-12 rounded-full object-contain" />
+            <h1 class="text-xl font-semibold">Kaku-Ryu: My Dynamic Resume Engine</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="user-display-name" class="text-lg font-medium"></span> <!-- Moved user display here -->
+            <button id="dark-mode-toggle" class="text-2xl hover:bg-white/10 p-2 rounded-md transition-colors" aria-label="Toggle Dark Mode">🌙</button>
+            <button id="logout-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md font-semibold transition-colors">Logout</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column: Actions -->
+        <section class="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg space-y-6 transition-colors">
+            <h2 class="text-2xl font-bold text-blue-950 dark:text-orange-400 border-b pb-3 mb-4 border-gray-200 dark:border-gray-700">Actions</h2>
+
+            <button id="update-resume-btn" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-colors shadow-md">
+                Update My Resume (from GitHub)
+            </button>
+
+            <div>
+                <label for="cv-upload" class="block text-sm font-medium mb-2">Upload Your Existing CV (.docx or .pdf)</label>
+                <form id="upload-cv-form" class="space-y-4">
+                    <input type="file" id="cv-upload" name="file" accept=".docx,.pdf"
+                        class="w-full text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors" />
+                    <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md transition-colors shadow-md">
+                        Upload & Parse CV
+                    </button>
+                </form>
+            </div>
+
+            <button id="download-resume-btn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors shadow-md">
+                Download Latest Resume (PDF)
+            </button>
+        </section>
+
+        <!-- Right Column: Integration Status & Projects -->
+        <section class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg space-y-6 transition-colors">
+            <h2 class="text-2xl font-bold text-blue-950 dark:text-orange-400 border-b pb-3 mb-4 border-gray-200 dark:border-gray-700">Integration Status</h2>
+            <div class="space-y-2 text-gray-700 dark:text-gray-300">
+                <p><strong>GitHub Connection:</strong> <span id="github-status" class="status-badge"></span></p>
+                <p><strong>LLM Analyzer:</strong> <span id="analyzer-status" class="status-badge"></span></p>
+                <p><strong>Scoring Engine:</strong> <span id="scoring-status" class="status-badge"></span></p>
+                <p><strong>CV Writer:</strong> <span id="cv-writer-status" class="status-badge"></span></p>
+                <p><strong>CV Parser:</strong> <span id="cv-parser-status" class="status-badge"></span></p>
+            </div>
+
+            <h2 class="text-2xl font-bold text-blue-950 dark:text-orange-400 border-b pb-3 mb-4 border-gray-200 dark:border-gray-700 mt-8">Your Projects</h2>
+            <div id="projects-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Projects will be dynamically loaded here by JavaScript -->
+                <p class="text-center text-gray-500 dark:text-gray-400">Projects will appear here after loading...</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto px-6 py-4 bg-blue-950 text-white text-center text-sm shadow-inner w-full">
+        <p>&copy; 2025 Ryu-technologies. All rights reserved.</p>
+    </footer>
+</body>
+</html>

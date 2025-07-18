@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaku-Ryu Register</title>
+  <link rel="icon" type="image/png" href="/static/images/kaku-ryu-logo.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom styles for the dark mode transition, if not fully covered by Tailwind */
+    body {
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+    .transition-colors { /* Apply to elements that need smooth color transitions */
+      transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    /* Ensure consistent font for icons if using external ones like Font Awesome */
+    .fa-github {
+      font-family: 'Font Awesome 5 Brands'; /* Or other font family if using different icon sets */
+    }
+  </style>
+  <!-- Optional: Font Awesome for GitHub icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <header class="flex justify-between items-center px-6 py-4 bg-blue-950 text-white shadow-md w-full">
+    <div class="flex items-center gap-4">
+      <img src="/static/images/kaku-ryu.png" alt="Kaku-Ryu Logo" class="w-12 h-12 rounded-full object-contain" />
+      <h1 class="text-xl font-semibold">Kaku-Ryu: My Dynamic Resume Engine</h1>
+    </div>
+    <button id="dark-mode-toggle" class="text-2xl hover:bg-white/10 p-2 rounded-md transition-colors" aria-label="Toggle Dark Mode">🌙</button>
+  </header>
+
+  <!-- Auth Card -->
+  <main class="flex-1 flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-md bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-8 space-y-6 transition-all">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-blue-950 dark:text-orange-400">Kaku-Ryu</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-300">Your Dynamic Resume Engine</p>
+      </div>
+
+      <form id="signup-form" class="space-y-4">
+        <div>
+          <label for="signup-username" class="block text-sm font-medium">Username</label>
+          <input type="text" id="signup-username" name="username" required autocomplete="username"
+            class="w-full mt-1 p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-orange-400 transition-colors" />
+        </div>
+
+        <div>
+          <label for="signup-email" class="block text-sm font-medium">Email</label>
+          <input type="email" id="signup-email" name="email" required autocomplete="email"
+            class="w-full mt-1 p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-orange-400 transition-colors" />
+        </div>
+
+        <div>
+          <label for="signup-password" class="block text-sm font-medium">Password</label>
+          <input type="password" id="signup-password" name="password" required autocomplete="new-password"
+            class="w-full mt-1 p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-orange-400 transition-colors" />
+        </div>
+
+        <div>
+          <label for="signup-confirm-password" class="block text-sm font-medium">Confirm Password</label>
+          <input type="password" id="signup-confirm-password" name="confirm_password" required autocomplete="new-password"
+            class="w-full mt-1 p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-orange-400 transition-colors" />
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-colors shadow-md">
+          Sign Up
+        </button>
+      </form>
+
+      <div class="relative flex items-center">
+        <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+        <span class="flex-shrink mx-4 text-gray-500 dark:text-gray-400">OR</span>
+        <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+      </div>
+
+      <button id="github-signup-btn" class="w-full py-3 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-md transition-colors shadow-md flex items-center justify-center space-x-2">
+        <i class="fab fa-github text-xl"></i>
+        <span>Sign Up with GitHub</span>
+      </button>
+
+      <p class="text-sm text-center">
+        Already have an account?
+        <a href="/login_page" class="text-blue-600 dark:text-orange-400 hover:underline transition-colors">Login</a>
+      </p>
+
+      <div id="auth-message" class="text-center text-sm font-medium p-3 rounded-md hidden transition-colors"></div>
+    </div>
+  </main>
+
+  <script>
+    // Dark mode toggle logic
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    darkModeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      // Store preference
+      if (document.body.classList.contains('dark')) {
+        localStorage.setItem('theme', 'dark');
+      } else {
+        localStorage.setItem('theme', 'light');
+      }
+    });
+
+    // Apply dark mode preference on load
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+
+    const signupForm = document.getElementById('signup-form');
+    const authMessage = document.getElementById('auth-message');
+    const githubSignupBtn = document.getElementById('github-signup-btn'); // New button reference
+
+    function showMessage(message, type) {
+      authMessage.textContent = message;
+      authMessage.classList.remove('hidden'); // Ensure it's visible
+      authMessage.classList.remove('bg-green-500', 'bg-red-500', 'bg-blue-500', 'text-white'); // Clear previous types
+
+      if (type === 'success') {
+        authMessage.classList.add('bg-green-500', 'text-white');
+      } else if (type === 'error') {
+        authMessage.classList.add('bg-red-500', 'text-white');
+      } else { // info
+        authMessage.classList.add('bg-blue-500', 'text-white');
+      }
+    }
+
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = signupForm['signup-username'].value.trim();
+      const email = signupForm['signup-email'].value.trim();
+      const password = signupForm['signup-password'].value;
+      const confirmPassword = signupForm['signup-confirm-password'].value;
+
+      if (password !== confirmPassword) {
+        showMessage('Passwords do not match.', 'error');
+        return;
+      }
+
+      showMessage('Signing up...', 'info');
+
+      try {
+        const response = await fetch('/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ username, email, password }).toString(),
+        });
+
+        // The backend /signup endpoint now redirects with email AND code in the URL.
+        // We need to check if the response is a redirect.
+        if (response.redirected) {
+            // The backend has already handled the redirect to /verify_page with params.
+            // We just need to follow it.
+            window.location.href = response.url;
+        } else {
+            // If it's not a redirect, it means there was an error or a JSON response.
+            const data = await response.json();
+            if (response.ok) {
+                // This case should ideally not be hit if backend always redirects on success.
+                // But as a fallback, handle success message.
+                showMessage(data.message, 'success');
+                // If for some reason the backend didn't redirect, manually redirect here
+                // This part might be redundant if backend always redirects on success.
+                setTimeout(() => {
+                    // Assuming the backend's /signup success response would contain the verification code if not redirecting
+                    // For now, we'll assume it always redirects as per current backend logic.
+                    // If backend sends code in JSON, you'd extract it here:
+                    // const verificationCode = data.verification_code;
+                    // window.location.href = `/verify_page?email=${encodeURIComponent(email)}&code=${encodeURIComponent(verificationCode)}`;
+                    console.warn("Backend /signup did not redirect. Assuming success and waiting for user to navigate to verify_page.");
+                }, 2000);
+            } else {
+                showMessage(`Error: ${data.detail || 'Signup failed.'}`, 'error');
+            }
+        }
+      } catch (err) {
+        console.error(err);
+        showMessage('Network error or server unreachable.', 'error');
+      }
+    });
+
+    // Event listener for "Sign Up with GitHub" button
+    githubSignupBtn.addEventListener('click', () => {
+      window.location.href = '/github_login'; // Redirect to backend endpoint to start OAuth
+    });
+
+    // Check for messages from redirects (e.g., email verification required)
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get('message');
+    const messageType = urlParams.get('type') || 'info'; // Default to info if type not specified
+
+    if (message) {
+        showMessage(message, messageType);
+        // Clear the message from the URL after displaying it
+        history.replaceState(null, '', window.location.pathname);
+    }
+  </script>
+</body>
+</html>
